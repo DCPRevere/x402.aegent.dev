@@ -1,0 +1,38 @@
+{
+  "name": "x402-dcprevere-com",
+  "version": "0.1.0",
+  "description": "Umbrella server hosting pay-per-call x402 demo APIs. figpay (figlet) is the first product.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "buyer": "tsx buyer/pay.ts"
+  },
+  "dependencies": {
+    "@x402/core": "^2.11.0",
+    "@x402/evm": "^2.11.0",
+    "@x402/express": "^2.11.0",
+    "@x402/fetch": "^2.11.0",
+    "@x402/paywall": "^2.11.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "figlet": "^1.8.0",
+    "posthog-node": "^4.2.0",
+    "viem": "^2.39.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
