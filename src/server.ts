@@ -4,10 +4,13 @@ import { buildLandingHandler, healthHandler } from "./core/landing.js";
 import { buildPaymentMiddleware } from "./core/payment.js";
 import { analyticsMiddleware } from "./core/analytics-middleware.js";
 import { shutdown as shutdownAnalytics } from "./core/analytics.js";
+import { helpRegistry, mountHelp } from "./core/help.js";
 import type { Product } from "./core/product.js";
-import { figletProduct } from "./products/figlet/router.js";
+import { figletProduct } from "./products/graphics/figlet/router.js";
+import { randomProduct } from "./products/random/router.js";
+import { passportProduct } from "./products/passport/router.js";
 
-export const products: Product[] = [figletProduct];
+export const products: Product[] = [figletProduct, randomProduct, passportProduct];
 
 /**
  * Build the umbrella Express app. Exported (and parameterised) so tests
@@ -16,6 +19,18 @@ export const products: Product[] = [figletProduct];
 export function buildApp(productList: Product[] = products): Express {
   const app = express();
   app.disable("x-powered-by");
+
+  // Reset registry per app instance — important for test runs that build
+  // multiple apps with different product lists.
+  helpRegistry.clear();
+  for (const product of productList) {
+    helpRegistry.registerProduct(product.help, "/" + product.slug);
+  }
+
+  // Help interceptor runs first so /help, ?help, and OPTIONS all bypass the
+  // paywall and the per-product validators. Registered before any GET handler
+  // so OPTIONS / and GET /help reach the registry instead of falling through.
+  mountHelp(app);
 
   // Free, top-level routes — registered before the paywall so they aren't
   // considered for payment.

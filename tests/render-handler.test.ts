@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import express from "express";
 import request from "supertest";
-import { figletProduct } from "../src/products/figlet/router.js";
+import { figletProduct } from "../src/products/graphics/figlet/router.js";
 import * as analytics from "../src/core/analytics.js";
 
 /**
@@ -11,15 +11,13 @@ import * as analytics from "../src/core/analytics.js";
  */
 function appWithRouter() {
   const app = express();
-  // Stand-in analytics: just attach a distinct_id so renderHandler emits.
-  app.use("/figlet", (_req, res, next) => {
+  app.use("/graphics/figlet", (_req, res, next) => {
     (res.locals as { analytics?: { distinctId: string } }).analytics = {
       distinctId: "test-id",
     };
     next();
   });
-  // Stand-in pre-validator: pre-set the validated input so renderHandler runs.
-  app.use("/figlet", (req, res, next) => {
+  app.use("/graphics/figlet", (req, res, next) => {
     if (req.path === "/render") {
       (
         res.locals as {
@@ -33,14 +31,14 @@ function appWithRouter() {
     }
     next();
   });
-  app.use("/figlet", figletProduct.router());
+  app.use("/graphics/figlet", figletProduct.router());
   return app;
 }
 
 describe("figlet renderHandler", () => {
   it("renders text/plain ASCII for valid input", async () => {
     const app = appWithRouter();
-    const res = await request(app).get("/figlet/render?text=hi");
+    const res = await request(app).get("/graphics/figlet/render?text=hi");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/text\/plain/);
     expect(res.text.length).toBeGreaterThan(0);
@@ -53,20 +51,19 @@ describe("figlet renderHandler", () => {
       events.push({ event, props: props ?? {} });
     });
     const app = appWithRouter();
-    await request(app).get("/figlet/render?text=hi");
+    await request(app).get("/graphics/figlet/render?text=hi");
     const rendered = events.find((e) => e.event === "product_rendered");
     expect(rendered).toBeDefined();
-    expect(rendered!.props.product).toBe("figlet");
+    expect(rendered!.props.product).toBe("graphics/figlet");
     expect(rendered!.props.font).toBe("Standard");
     expect(rendered!.props.text_length).toBe(2);
     expect(typeof rendered!.props.render_ms).toBe("number");
   });
 
   it("returns 500 when the validator middleware did not run", async () => {
-    // App that mounts the router but doesn't pre-set figletInput.
     const app = express();
-    app.use("/figlet", figletProduct.router());
-    const res = await request(app).get("/figlet/render?text=hi");
+    app.use("/graphics/figlet", figletProduct.router());
+    const res = await request(app).get("/graphics/figlet/render?text=hi");
     expect(res.status).toBe(500);
     expect(res.text).toMatch(/validator did not run/);
   });

@@ -20,18 +20,18 @@ describe("umbrella server (HTTP)", () => {
       const res = await request(app).get("/");
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toMatch(/text\/plain/);
-      expect(res.text).toContain("/figlet");
+      expect(res.text).toContain("graphics/figlet");
       expect(res.text).toContain("$0.10");
     });
 
-    it("GET /figlet returns the product info page", async () => {
-      const res = await request(app).get("/figlet");
+    it("GET /graphics/figlet returns the product info page", async () => {
+      const res = await request(app).get("/graphics/figlet");
       expect(res.status).toBe(200);
       expect(res.text).toContain("PAID $0.10");
     });
 
-    it("GET /figlet/fonts lists fonts as JSON", async () => {
-      const res = await request(app).get("/figlet/fonts");
+    it("GET /graphics/figlet/fonts lists fonts as JSON", async () => {
+      const res = await request(app).get("/graphics/figlet/fonts");
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.fonts)).toBe(true);
       expect(res.body.fonts).toContain("Standard");
@@ -46,33 +46,42 @@ describe("umbrella server (HTTP)", () => {
 
   describe("validation runs before the paywall", () => {
     it("missing text returns 400 (not 402)", async () => {
-      const res = await request(app).get("/figlet/render");
+      const res = await request(app).get("/graphics/figlet/render");
       expect(res.status).toBe(400);
       expect(res.text).toMatch(/text query parameter is required/);
     });
 
     it("unknown font returns 400 (not 402)", async () => {
-      const res = await request(app).get("/figlet/render?text=hi&font=NotAFont");
+      const res = await request(app).get("/graphics/figlet/render?text=hi&font=NotAFont");
       expect(res.status).toBe(400);
       expect(res.text).toMatch(/unknown font/);
     });
 
     it("text past the length cap returns 400 (not 402)", async () => {
-      const res = await request(app).get(`/figlet/render?text=${"x".repeat(257)}`);
+      const res = await request(app).get(
+        `/graphics/figlet/render?text=${"x".repeat(257)}`,
+      );
       expect(res.status).toBe(400);
     });
   });
 
   describe("paywall fires on valid paid requests", () => {
     it("valid request without X-PAYMENT returns 402", async () => {
-      const res = await request(app).get("/figlet/render?text=hi");
+      const res = await request(app).get("/graphics/figlet/render?text=hi");
       expect(res.status).toBe(402);
     });
 
-    it("a different paid product path also 402s (sanity)", async () => {
-      // The figlet/render path is the only paid route today; this guards
-      // against the paywall accidentally protecting unrelated routes.
-      const free = await request(app).get("/figlet/fonts");
+    it("402 response carries Link headers pointing at help and catalog", async () => {
+      const res = await request(app).get("/graphics/figlet/render?text=hi");
+      expect(res.status).toBe(402);
+      const link = res.headers["link"];
+      expect(typeof link).toBe("string");
+      expect(link).toMatch(/rel="self-help"/);
+      expect(link).toMatch(/rel="catalog"/);
+    });
+
+    it("free routes (e.g. /graphics/figlet/fonts) are not protected", async () => {
+      const free = await request(app).get("/graphics/figlet/fonts");
       expect(free.status).toBe(200);
     });
   });

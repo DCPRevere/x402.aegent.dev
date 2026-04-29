@@ -1,10 +1,11 @@
 import express, { type Request, type Response, type NextFunction } from "express";
-import { capture } from "../../core/analytics.js";
+import { capture } from "../../../core/analytics.js";
 import { listFonts, render } from "./render.js";
 import { validateFigletInput, type ValidatedFigletInput } from "./validate.js";
-import type { Product } from "../../core/product.js";
+import type { Product } from "../../../core/product.js";
+import { figletHelp } from "./help.js";
 
-const SLUG = "figlet";
+const SLUG = "graphics/figlet";
 
 function validateMiddleware(req: Request, res: Response, next: NextFunction) {
   const result = validateFigletInput(req.query);
@@ -17,9 +18,9 @@ function validateMiddleware(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
- * Pre-validator mounted under `/figlet` (so `req.path` is post-strip).
+ * Pre-validator mounted under `/graphics/figlet` (so `req.path` is post-strip).
  * Only runs validation on the paid render path so it returns 400 *before*
- * the paywall sees the request. Other figlet routes (/, /fonts) pass through.
+ * the paywall sees the request. Other routes (/, /fonts) pass through.
  */
 export function figletPreValidator(req: Request, res: Response, next: NextFunction) {
   if (req.path === "/render") {
@@ -71,17 +72,18 @@ function infoHandler(req: Request, res: Response) {
 Render text in a figfont (https://www.figlet.org). $0.10 per call.
 
 Routes
-  GET ${host}/figlet              this page
-  GET ${host}/figlet/fonts        list of available fonts (free)
-  GET ${host}/figlet/render       render text (PAID $0.10)
+  GET ${host}/graphics/figlet              this page
+  GET ${host}/graphics/figlet/fonts        list of available fonts (free)
+  GET ${host}/graphics/figlet/render       render text (PAID $0.10)
+  GET ${host}/graphics/figlet/help         machine-readable catalog
 
 Query parameters for /render:
   text   required, max 256 chars
-  font   defaults to Standard; see /figlet/fonts
+  font   defaults to Standard; see /graphics/figlet/fonts
   width  optional, integer 20..200
 
 Try the paywall:
-  curl -i '${host}/figlet/render?text=hello'
+  curl -i '${host}/graphics/figlet/render?text=hello'
 `,
   );
 }
@@ -107,4 +109,5 @@ export const figletProduct: Product = {
   ],
   preValidators: [figletPreValidator],
   router: figletRouter,
+  help: figletHelp,
 };

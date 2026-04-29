@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateFigletInput } from "../src/products/figlet/validate.js";
+import { validateFigletInput } from "../src/products/graphics/figlet/validate.js";
 
 describe("validateFigletInput", () => {
   it("accepts a minimal valid input", () => {

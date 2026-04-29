@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { listFonts, render } from "../src/products/figlet/render.js";
+import { listFonts, render } from "../src/products/graphics/figlet/render.js";
 
 describe("figlet render", () => {
   it("lists at least one font", () => {

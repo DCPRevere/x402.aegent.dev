@@ -31,5 +31,13 @@ export const config = {
   facilitatorUrl: required("FACILITATOR_URL", "https://x402.org/facilitator"),
   payTo: ethAddress(required("PAY_TO")),
   posthogKey: process.env.POSTHOG_KEY ?? "",
-  posthogHost: process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
+  posthogHost: process.env.POSTHOG_HOST ?? "https://us.i.posthog.com",
+  databasePath: process.env.DATABASE_PATH ?? "./data/x402.db",
+  rpcUrl: process.env.RPC_URL ?? "",
+  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "",
+  operator: {
+    contact: process.env.OPERATOR_CONTACT ?? "ops@x402.dcprevere.com",
+    statusPage: process.env.STATUS_PAGE_URL ?? "",
+    tos: process.env.TOS_URL ?? "",
+  },
 };
