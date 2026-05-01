@@ -1,0 +1,27 @@
+# /srv/x402/docker-compose.yml on the host.
+#
+# Runs the x402.aegent.dev umbrella server. Single container, single sqlite
+# WAL volume, bound to localhost only — Caddy on the host fronts 443.
+
+services:
+  x402:
+    image: ghcr.io/dcprevere/x402-aegent-dev:latest
+    container_name: x402
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:34000:4021"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4021/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

@@ -1,0 +1,11 @@
+# /etc/caddy/conf.d/x402.caddyfile on the host.
+#
+# x402's PAYMENT-REQUIRED and PAYMENT-RESPONSE response headers are
+# already set by the upstream — Caddy passes them through verbatim. No
+# special handling needed; this is just a standard reverse_proxy block
+# matching the existing sacra pattern.
+
+x402.aegent.dev {
+    reverse_proxy localhost:34000
+    encode gzip
+}
