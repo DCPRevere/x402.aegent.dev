@@ -15,8 +15,8 @@
 </div>
 
 <p align="center">
-  <strong>The agentic economy, deployed.</strong><br>
-  24 paid HTTP endpoints across six product domains, callable by any wallet over USDC on Base.
+  <strong>An x402 reference deployment.</strong><br>
+  24 paid HTTP endpoints across six product domains, settled in USDC on Base.
 </p>
 
 <p align="center">
@@ -28,19 +28,9 @@
 
 ## What it is
 
-A working [x402][x402] reference deployment with six product domains:
-ASCII art, verifiable randomness, identity, conditional escrow, paid
-messaging, and a public square (board + sealed-bid auction + paid
-chatroom). 24 paid endpoints, priced $0.001 to $0.10, settled in USDC
-on Base. No signups, no API keys.
+An [x402][x402] reference deployment with six product domains: ASCII art, verifiable randomness, identity, conditional escrow, paid messaging, and a public square (board, sealed-bid auction, paid chatroom). 24 paid endpoints priced $0.001 to $0.10, settled in USDC on Base. No accounts.
 
-Most other public x402 deployments are a single endpoint behind a
-paywall — useful for showing the protocol works, not enough to show
-what agents could actually do with it. The point of having six
-product domains side by side is that an agent can chain them: pay
-for randomness here, post the result to the board there, settle a
-bid using the same wallet, with one consistent surface across the
-whole thing.
+The six domains share a single surface, so a buyer that knows how to call one endpoint can call any of them — pay for a draw, post the result to the board, settle a bid with the same wallet.
 
 ## What's in the box
 
@@ -100,7 +90,7 @@ Or read the live catalog:
 curl -s https://x402.aegent.dev/help | jq
 ```
 
-## Some things worth a closer look
+## Notable surfaces
 
 ### Fractal discovery
 
@@ -134,26 +124,15 @@ historical block hash, no need to trust the server's RNG.
 
 ### Paid-to-send messaging
 
-`/wire` inverts email's incentive structure: free to receive, free to
-poll, $0.005 to send. That's small enough an agent paying for a real
-message won't notice, and large enough that broadcasting to a million
-inboxes costs more than the bot is worth.
+`/wire` is free to receive, free to poll, $0.005 to send. Owner tokens are stored as `sha256(token)` so a database dump does not reveal credentials. `/agora/bar` uses the same model for ambient chat at $0.001/line with a per-speaker quota.
 
-Owner tokens are stored as `sha256(token)`, so a DB dump doesn't reveal
-anyone's auth credential. `/agora/bar` does the same trick for ambient
-chat at $0.001/line, with a per-speaker quota so one wallet can't
-monopolise the rolling buffer.
-
-## Try it in 10 seconds (no payment, just see the 402)
+## Try it without paying
 
 ```bash
 curl -i 'https://x402.aegent.dev/graphics/figlet/render?text=hello'
 ```
 
-You'll get back `HTTP 402 Payment Required` with a `PAYMENT-REQUIRED`
-header containing base64-encoded payment instructions, plus `Link`
-headers pointing at `/graphics/figlet/render/help` and `/help`. Decode
-the header and you have everything an agent needs to settle:
+The response is `HTTP 402 Payment Required` with a `PAYMENT-REQUIRED` header containing base64-encoded payment instructions, and `Link` headers pointing at `/graphics/figlet/render/help` and `/help`. Decode the header to see what a buyer needs to settle:
 
 ```bash
 curl -s -i 'https://x402.aegent.dev/graphics/figlet/render?text=hi' \
@@ -162,15 +141,11 @@ curl -s -i 'https://x402.aegent.dev/graphics/figlet/render?text=hi' \
   | jq
 ```
 
-## Pay autonomously (the buyer demo)
+## Buyer demo
 
-The repo ships a Node script using [`@x402/fetch`][fetch] that *behaves
-like an agent*: it reads the catalog, signs USDC transfers from a test
-wallet, retries with `X-PAYMENT`, and surfaces the response. See
-[`buyer/README.md`](./buyer/README.md) for the full runbook (test
-wallet, Sepolia ETH + USDC faucets).
+A Node script using [`@x402/fetch`][fetch] reads the catalog, signs USDC transfers from a test wallet, retries with `X-PAYMENT`, and prints the response. See [`buyer/README.md`](./buyer/README.md) for the runbook (test wallet, Sepolia ETH + USDC faucets).
 
-The demo is scenario-based — pick what you want to exercise:
+Pick a scenario:
 
 ```bash
 export BUYER_PRIVATE_KEY=0x...                # Sepolia-only test wallet
@@ -203,11 +178,7 @@ interface Product {
 }
 ```
 
-Adding a seventh product is genuinely four files:
-`router.ts` (handlers + Product export), `state.ts` (sqlite migrations
-+ DAOs), `help.ts` (catalog descriptor), `tests/<name>.test.ts`. The
-infrastructure (paywall, /help, analytics, logging, validation,
-errors, signing, persistence) is shared and zero-config.
+A new product is four files: `router.ts` (handlers + `Product` export), `state.ts` (sqlite migrations and DAOs), `help.ts` (catalog descriptor), `tests/<name>.test.ts`. Paywall, `/help`, analytics, logging, validation, error envelope, signing, and persistence are shared.
 
 ```
 x402.aegent.dev/
@@ -248,53 +219,20 @@ x402.aegent.dev/
 
 ### Defence in depth
 
-- **Validation runs before the paywall.** A buyer never pays $0.10 for
-  a malformed request. Every paid POST has a `preValidator` that
-  inspects `req.body`, parses it into a typed shape, stashes it on
-  `res.locals` (with module-augmented Express types), and lets the
-  paywall fire only on requests that would actually succeed.
-- **Read-modify-write races resolved by conditional UPDATE.** Reveal a
-  commit twice, unlock a seal twice, finalize an auction twice — the
-  second caller gets a clean 409 or the same idempotent response, never
-  a duplicate write.
-- **Wallet tokens stored as hashes.** Wire's owner_tokens are hashed
-  before persistence. A database dump reveals zero tokens.
-- **NaN-tolerant timestamps.** `Date.parse("garbage")` returns NaN, and
-  `NaN < Date.now()` returns false; that's a security trap. The
-  `core/time.ts` helpers (`isPast`, `isFuture`, `parseTimestamp`)
-  bail out explicitly so malformed stored data can't slip past a
-  validity check.
-- **Versioned attestation envelopes.** Every signed claim is wrapped
-  `{claim_version, payload}`, so we can change a payload's meaning
-  without producing colliding MACs against old issuance.
-- **Rate-limited free routes.** Paid endpoints self-limit through cost.
-  Free endpoints have an IP-keyed `express-rate-limit` (120 req/min/IP)
-  so a $0 DDoS is unprofitable.
+- Validation runs before the paywall. Every paid POST has a `preValidator` that parses `req.body` into a typed shape and stashes it on `res.locals`; the paywall only fires on requests that would otherwise succeed.
+- Read-modify-write races are resolved by conditional `UPDATE`. Re-reveals, double-unlocks, and double-finalize all return 409 or the same idempotent response.
+- Wire owner tokens are stored as `sha256(token)`.
+- Timestamp parsing rejects NaN explicitly; `core/time.ts` (`isPast`, `isFuture`, `parseTimestamp`) does not rely on `NaN < Date.now()` evaluating false.
+- Signed claims are wrapped `{claim_version, payload}` so a payload's meaning can change without producing colliding MACs against old issuance.
+- Free routes are IP-keyed rate-limited (120 req/min/IP). Paid routes self-limit through cost.
 
-### Attestation vs. settlement
+### Attestation vs settlement
 
-`/escrow` and `/agora/auction` emit HMAC-signed receipts but don't
-hold or move USDC. They're attestation primitives — useful as input
-to a downstream contract that honours this server's signing key, or
-for trust-anchored demos. The other paid products (figlet, random,
-passport, wire, agora/board, agora/bar) deliver their full value
-within the response, and the USDC paid via x402 is the entire
-settlement. The distinction is called out in each endpoint's help
-node so a buyer reading the catalog sees it before paying.
+`/escrow` and `/agora/auction` emit HMAC-signed receipts but do not hold or move USDC. They are attestation primitives, suitable as input to a downstream contract that honours this server's signing key, or for trust-anchored demos. The other paid products (figlet, random, passport, wire, agora/board, agora/bar) deliver their full value in the response, and the USDC paid via x402 is the full settlement. The distinction is called out in each endpoint's `/help` node.
 
-## Why x402
+## How x402 works
 
-[x402][x402] reuses the long-reserved `HTTP 402 Payment Required`
-status code. A server returns 402 with machine-readable payment
-instructions, the client signs a USDC transfer from its wallet,
-retries with the payment header, and gets the resource. The seller
-only needs a wallet address — no custody, no PCI, no Stripe account,
-no buyer-side API keys, no email confirmations.
-
-Every product on this umbrella follows the same shape, so callers
-(humans or agents) can switch between them without re-onboarding. An
-agent funded with $1 of testnet USDC can use every paid endpoint here
-and still have change.
+[x402][x402] reuses the `HTTP 402 Payment Required` status. A server returns 402 with machine-readable payment instructions; the client signs a USDC transfer from its wallet, retries with the payment header, and gets the resource. The seller needs a wallet address only — no custody, no PCI, no Stripe, no buyer-side API keys.
 
 ## Network
 
@@ -412,43 +350,20 @@ npm run typecheck      # tsc --noEmit on the whole project
   `clientFingerprint` for unpaid-→-paid funnel joins,
   status-code-to-event-name mapping.
 
-PRs welcome for edge cases we missed.
+## Status
 
-## What's blocking deployment
+- The umbrella is not yet deployed to `x402.aegent.dev`.
+- The mainnet path is documented but has not been run end-to-end with real CDP keys.
+- No funded buyer run on Sepolia has been recorded against this repo.
+- `/escrow` and `/agora/auction` emit signed attestations but do not custody USDC. A settlement contract is out of scope here.
 
-The code is shippable. The deploy isn't done. Honest list:
+## Roadmap
 
-- **No actual deploy.** Dockerfile is correct and the build is clean,
-  but the umbrella isn't yet running on `x402.aegent.dev`. Railway
-  + a CNAME = 30 minutes.
-- **No mainnet test.** The mainnet flip is documented but never run
-  end-to-end with real CDP keys.
-- **No funded buyer end-to-end run.** All offline tests pass; a real
-  Sepolia run with actual USDC has not been performed in this repo.
-- **Auction settlement.** `/escrow` and `/agora/auction` emit signed
-  attestations but do not custody USDC. Real settlement needs a
-  downstream contract — a separate work stream, intentionally out of
-  scope here.
-
-## What's next
-
-- **Settlement contract** for escrow / auction. Solidity contract that
-  reads the server's signing key, validates an attestation, and
-  performs the actual transfer. This closes the loop from attestation
-  to value movement.
-- **subs-x402** — a separate repo: drop-in subscription middleware for
-  any x402 endpoint (1% rake on settlement). Held back from this
-  umbrella because it's product-as-infrastructure; this umbrella will
-  be its first dogfood customer.
-- **Two-buyer auction orchestration** in the buyer demo. Today the
-  auction scenario can't bid against itself; a future demo orchestrates
-  two wallets in one process.
-- **Streaming presence in `/agora/bar`** — the rolling presence index.
-  Today the bar is paid-say + free-tail; presence would add a
-  free-poll heartbeat surface.
-- **More products.** `/coins` for minting, `/lookup` paid-fetch
-  fronting expensive APIs, `/witness` for paid attested scrapes. The
-  Product interface makes them cheap to add. Sketches welcome.
+- Settlement contract for `/escrow` and `/agora/auction`: a Solidity contract that validates the server's HMAC attestation and transfers USDC.
+- subs-x402: subscription middleware for x402 endpoints, in a separate repo.
+- Two-buyer auction orchestration in the buyer demo.
+- Streaming presence in `/agora/bar`.
+- Additional products: `/coins`, `/lookup`, `/witness`.
 
 [x402]: https://www.x402.org/
 [fetch]: https://www.npmjs.com/package/@x402/fetch
