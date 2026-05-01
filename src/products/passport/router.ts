@@ -16,6 +16,13 @@ import {
 import { freshNonce, checkSolution } from "./captcha.js";
 import { passportHelp } from "./help.js";
 import { defaultVerifier, type VerifyResult } from "./verify.js";
+import {
+  usernamePreValidator,
+  claimUsernameHandler,
+  getUsernameHandler,
+  listUsernamesByWalletHandler,
+  rotateUsernameHandler,
+} from "./username.js";
 import type { Product } from "../../core/product.js";
 
 const SLUG = "passport";
@@ -192,14 +199,21 @@ export function passportRouter(): express.Router {
   router.post("/anti-captcha/challenge", captchaChallengeHandler);
   router.post("/anti-captcha/solve", captchaSolveHandler);
   router.get("/anti-captcha/passes/:wallet", passesGetHandler);
+  router.post("/username", (req, res) => {
+    void claimUsernameHandler(req, res);
+  });
+  router.get("/username/by-wallet/:wallet", listUsernamesByWalletHandler);
+  router.post("/username/:name/rotate", rotateUsernameHandler);
+  router.get("/username/:name", getUsernameHandler);
   return router;
 }
 
 export const passportProduct: Product = {
   slug: SLUG,
   description:
-    "Identity attestations: bind wallets to ENS/domain/gist anchors, or prove " +
-    "non-humanness via proof-of-work challenges.",
+    "Identity attestations: bind wallets to ENS/domain/gist anchors, prove " +
+    "non-humanness via proof-of-work challenges, or claim a permanent username " +
+    "bound to a wallet and an encryption pubkey.",
   paidRoutes: [
     {
       method: "POST",
@@ -213,7 +227,14 @@ export const passportProduct: Product = {
       price: "$0.001",
       description: "Issue an anti-human proof-of-work challenge.",
     },
+    {
+      method: "POST",
+      path: `/${SLUG}/username`,
+      price: "$10.00",
+      description: "Claim a permanent username bound to a wallet and pubkey.",
+    },
   ],
+  preValidators: [usernamePreValidator],
   router: passportRouter,
   help: passportHelp,
 };

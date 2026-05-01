@@ -51,7 +51,23 @@ export const escrowHelp: ProductHelpInput = {
           { name: "memo", type: "string", required: false, doc: "Optional buyer memo, ≤ 256 chars." },
         ],
       },
-      pricing: { kind: "flat", amount: "100000", amount_usdc: "0.10" },
+      pricing: {
+        kind: "parametric",
+        rules: [
+          {
+            when: "default",
+            multiplier: 0.01,
+            min_amount: "100000",
+            min_amount_usdc: "0.10",
+          },
+        ],
+        examples: [
+          { call: "amount_usdc=1000000 ($1)", amount: "100000", amount_usdc: "0.10" },
+          { call: "amount_usdc=10000000 ($10)", amount: "100000", amount_usdc: "0.10" },
+          { call: "amount_usdc=100000000 ($100)", amount: "1000000", amount_usdc: "1.00" },
+          { call: "amount_usdc=10000000000 ($10,000)", amount: "100000000", amount_usdc: "100.00" },
+        ],
+      },
       output: { media_types: ["application/json"] },
       examples: [
         {

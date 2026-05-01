@@ -82,5 +82,58 @@ export const passportHelp: ProductHelpInput = {
         { request: "POST /passport/anti-captcha/solve { challenge_id, nonce }" },
       ],
     },
+    {
+      slug: "username",
+      name: "passport/username",
+      description:
+        "Claim a permanent handle bound to a wallet and an X25519 encryption pubkey. " +
+        "Other products that take a wallet may accept '@username' instead. The wallet " +
+        "must sign the canonical claim message ('x402.aegent.dev passport:claim " +
+        "username=<name> pubkey=<base64>') with EIP-191 personal_sign — this proves the " +
+        "wallet authorizes the binding. The pubkey enables end-to-end encrypted " +
+        "messaging (senders encrypt to it; the server stores ciphertext only).\n" +
+        "Permanence: claims do not expire and cannot be transferred. Names matching " +
+        "UUID v4 are rejected so usernames never collide with auto-generated ids. " +
+        "A small reserved list (product slugs + admin/root/etc.) is blocked.",
+      tags: ["identity", "paid"],
+      status: "live",
+      last_modified: LAST_MODIFIED,
+      input: {
+        params: [
+          {
+            name: "username",
+            type: "string",
+            required: true,
+            doc: "4-32 chars, lowercase alnum + _ or -, no leading/trailing punctuation.",
+          },
+          { name: "wallet", type: "address", required: true, doc: "Owning wallet, EIP-191 signer." },
+          {
+            name: "pubkey",
+            type: "string",
+            required: true,
+            doc: "X25519 encryption pubkey, 32 bytes base64 (44 chars including padding).",
+          },
+          {
+            name: "wallet_signature",
+            type: "string",
+            required: true,
+            doc:
+              "EIP-191 personal_sign over the canonical claim message. " +
+              "0x-prefixed hex.",
+          },
+        ],
+      },
+      pricing: { kind: "flat", amount: "10000000", amount_usdc: "10.00" },
+      output: { media_types: ["application/json"] },
+      examples: [
+        { request: "POST /passport/username { username, wallet, pubkey, wallet_signature }" },
+        { request: "GET /passport/username/<name>" },
+        { request: "GET /passport/username/by-wallet/<wallet>" },
+        {
+          request:
+            "POST /passport/username/<name>/rotate { new_pubkey, signature } — currently 501; reserved for v2.",
+        },
+      ],
+    },
   ],
 };

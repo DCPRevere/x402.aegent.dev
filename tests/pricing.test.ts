@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { usdcBaseUnits, usdcPricing } from "../src/core/pricing.js";
+import { usdcBaseUnits, usdcPricing, baseUnitsToPrice } from "../src/core/pricing.js";
 
 describe("usdcBaseUnits", () => {
   it("converts whole-dollar amounts", () => {
@@ -31,5 +31,35 @@ describe("usdcBaseUnits", () => {
 
   it("usdcPricing returns both forms", () => {
     expect(usdcPricing("0.10")).toEqual({ amount: "100000", amount_usdc: "0.10" });
+  });
+});
+
+describe("baseUnitsToPrice", () => {
+  it("formats whole-dollar amounts", () => {
+    expect(baseUnitsToPrice(1_000_000n)).toBe("$1.00");
+    expect(baseUnitsToPrice(100_000_000n)).toBe("$100.00");
+  });
+
+  it("formats cent amounts", () => {
+    expect(baseUnitsToPrice(100_000n)).toBe("$0.10");
+    expect(baseUnitsToPrice(10_000n)).toBe("$0.01");
+    expect(baseUnitsToPrice(50_000n)).toBe("$0.05");
+  });
+
+  it("formats sub-cent amounts and trims zeros past two decimals", () => {
+    expect(baseUnitsToPrice(5_000n)).toBe("$0.005");
+    expect(baseUnitsToPrice(1_000n)).toBe("$0.001");
+  });
+
+  it("handles zero", () => {
+    expect(baseUnitsToPrice(0n)).toBe("$0.00");
+  });
+
+  it("rejects negative units", () => {
+    expect(() => baseUnitsToPrice(-1n)).toThrow();
+  });
+
+  it("handles very large amounts without overflow", () => {
+    expect(baseUnitsToPrice(123_456_789_012_345n)).toBe("$123456789.012345");
   });
 });

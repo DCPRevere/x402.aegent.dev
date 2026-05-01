@@ -3,6 +3,7 @@ import { signClaim } from "../../core/sign.js";
 import { isAddress, isUuidV4 } from "../../core/addr.js";
 import { isFuture, parseTimestamp } from "../../core/time.js";
 import { log } from "../../core/log.js";
+import { baseUnitsToPrice } from "../../core/pricing.js";
 import {
   ensureEscrowTables,
   createEscrow,
@@ -108,6 +109,37 @@ function validateConditionValue(kind: EscrowConditionKind, value: string): boole
     case "commit_revealed":
       return isUuidV4(value);
   }
+}
+
+// ----- Pricing --------------------------------------------------------
+
+/**
+ * /escrow/create price: max($0.10, 1% of amount_usdc). The amount_usdc field
+ * in the request body is in USDC base units (6 decimals), so $1.00 escrow
+ * carries amount_usdc="1000000". 1% of base units is amount/100, evaluated as
+ * bigint to avoid float drift on large values.
+ *
+ * Pre-validator runs before the paywall, so by the time this fires the body
+ * has already been validated as a positive integer string. If the body is
+ * absent or malformed we fall back to the floor — the request will fail
+ * validation anyway and never reach settlement.
+ */
+const ESCROW_FLOOR_BASE_UNITS = 100_000n; // $0.10
+const ESCROW_FLOOR_PRICE = "$0.10";
+
+export function escrowCreatePrice(req: Request): string {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const raw = typeof body.amount_usdc === "string" ? body.amount_usdc : "";
+  if (!/^\d+$/.test(raw)) return ESCROW_FLOOR_PRICE;
+  let amount: bigint;
+  try {
+    amount = BigInt(raw);
+  } catch {
+    return ESCROW_FLOOR_PRICE;
+  }
+  const onePercent = amount / 100n;
+  const charge = onePercent < ESCROW_FLOOR_BASE_UNITS ? ESCROW_FLOOR_BASE_UNITS : onePercent;
+  return baseUnitsToPrice(charge);
 }
 
 // ----- Pre-validator for paid POST /escrow/create ---------------------
@@ -308,8 +340,9 @@ export const escrowProduct: Product = {
     {
       method: "POST",
       path: `/${SLUG}/create`,
-      price: "$0.10",
-      description: "Open a conditional escrow.",
+      price: escrowCreatePrice,
+      displayPrice: "1% (min $0.10)",
+      description: "Open a conditional escrow. Charged at 1% of amount_usdc, min $0.10.",
     },
   ],
   preValidators: [escrowPreValidator],

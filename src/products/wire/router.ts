@@ -38,8 +38,24 @@ function readOwnerToken(req: Request): string | null {
  * res.locals so the handler isn't a duplicate parser.
  */
 export function wirePreValidator(req: Request, res: Response, next: NextFunction) {
+  if (req.method !== "POST") return next();
+
+  if (req.path === "/inbox") {
+    if (!req.body || typeof req.body !== "object") {
+      res.status(400).json({ error: "JSON body required" });
+      return;
+    }
+    const body = req.body as Record<string, unknown>;
+    const owner_wallet = typeof body.owner_wallet === "string" ? body.owner_wallet : "";
+    if (!isAddress(owner_wallet)) {
+      res.status(400).json({ error: "owner_wallet must be a 0x-prefixed 20-byte hex address" });
+      return;
+    }
+    return next();
+  }
+
   const sendMatch = req.path.match(/^\/inbox\/([^/]+)\/send$/);
-  if (req.method !== "POST" || !sendMatch) return next();
+  if (!sendMatch) return next();
 
   if (!req.body || typeof req.body !== "object") {
     res.status(400).json({ error: "JSON body required" });
@@ -95,7 +111,7 @@ function getInboxHandler(req: Request, res: Response) {
   res.json({
     inbox,
     queued: countQueued(inbox.id),
-    price_per_send_usdc: "0.005",
+    price_per_send_usdc: "0.01",
   });
 }
 
@@ -202,12 +218,18 @@ export function wireRouter(): express.Router {
 export const wireProduct: Product = {
   slug: SLUG,
   description:
-    "Paid messaging inboxes. Free to create and read; senders pay per message.",
+    "Paid messaging inboxes. Owners pay to create; senders pay per message; reads free.",
   paidRoutes: [
     {
       method: "POST",
+      path: `/${SLUG}/inbox`,
+      price: "$0.50",
+      description: "Create a paid inbox owned by a wallet.",
+    },
+    {
+      method: "POST",
       path: `/${SLUG}/inbox/:id/send`,
-      price: "$0.005",
+      price: "$0.01",
       description: "Drop a message into an open inbox.",
     },
   ],

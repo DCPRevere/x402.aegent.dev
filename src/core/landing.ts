@@ -8,7 +8,12 @@ export function buildLandingHandler(products: Product[]) {
 
     const productLines = products
       .map((p) => {
-        const paid = p.paidRoutes.map((r) => `      ${r.method} ${r.path}  ${r.price}`).join("\n");
+        const paid = p.paidRoutes
+          .map((r) => {
+            const shown = typeof r.price === "string" ? r.price : (r.displayPrice ?? "");
+            return `      ${r.method} ${r.path}  ${shown}`;
+          })
+          .join("\n");
         return `  /${p.slug}\n      ${p.description}\n${paid}`;
       })
       .join("\n\n");

@@ -185,8 +185,8 @@ async function scenarioPassport() {
 }
 
 async function scenarioWire() {
-  console.error("== /wire (create inbox → paid send → peek → poll) ==");
-  const create = await freeCall("POST", "/wire/inbox", { owner_wallet: account.address });
+  console.error("== /wire (paid create → paid send → peek → poll) ==");
+  const create = await paidCall("POST", "/wire/inbox", { owner_wallet: account.address });
   const created = create.body as { inbox: { id: string }; owner_token: string };
   console.error(`inbox id: ${created.inbox.id}`);
 

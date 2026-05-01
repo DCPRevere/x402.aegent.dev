@@ -9,6 +9,7 @@ import { RANDOM_MIGRATIONS } from "../src/products/random/state.js";
 import {
   escrowProduct,
   escrowPreValidator,
+  escrowCreatePrice,
   setContextProviderForTesting,
   resetContextProviderForTesting,
 } from "../src/products/escrow/router.js";
@@ -355,6 +356,34 @@ describe("/escrow", () => {
           }),
         );
       expect(res.status).toBe(201);
+    });
+  });
+
+  describe("escrowCreatePrice — 1% with $0.10 floor", () => {
+    function priceFor(amountUsdc: string): string {
+      return escrowCreatePrice({ body: { amount_usdc: amountUsdc } } as never);
+    }
+
+    it("charges the floor for tiny escrows", () => {
+      expect(priceFor("1000000")).toBe("$0.10"); // $1 escrow, 1% = $0.01, floor wins
+      expect(priceFor("10000000")).toBe("$0.10"); // $10 escrow, 1% = $0.10, ties floor
+      expect(priceFor("1")).toBe("$0.10"); // dust escrow
+    });
+
+    it("charges 1% above the floor", () => {
+      expect(priceFor("100000000")).toBe("$1.00"); // $100 -> $1
+      expect(priceFor("1000000000")).toBe("$10.00"); // $1k -> $10
+      expect(priceFor("10000000000")).toBe("$100.00"); // $10k -> $100
+    });
+
+    it("handles huge amounts without overflow", () => {
+      expect(priceFor("1000000000000000")).toBe("$10000000.00"); // $1B -> $10M
+    });
+
+    it("falls back to floor on malformed input", () => {
+      expect(escrowCreatePrice({ body: {} } as never)).toBe("$0.10");
+      expect(escrowCreatePrice({ body: { amount_usdc: "abc" } } as never)).toBe("$0.10");
+      expect(escrowCreatePrice({ body: null } as never)).toBe("$0.10");
     });
   });
 });

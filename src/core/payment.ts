@@ -3,6 +3,7 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { config } from "./config.js";
+import { log } from "./log.js";
 import type { PaidRoute } from "./product.js";
 
 /**
@@ -17,12 +18,15 @@ export function buildPaymentMiddleware(routes: PaidRoute[]): RequestHandler {
     new ExactEvmScheme(),
   );
 
+  type PriceCtx = { adapter: { getBody?: () => unknown } };
+  type DynamicPrice = (ctx: PriceCtx) => string;
+
   const routesConfig: Record<
     string,
     {
       accepts: {
         scheme: "exact";
-        price: string;
+        price: string | DynamicPrice;
         network: `${string}:${string}`;
         payTo: `0x${string}`;
         maxTimeoutSeconds: number;
@@ -32,10 +36,33 @@ export function buildPaymentMiddleware(routes: PaidRoute[]): RequestHandler {
   > = {};
 
   for (const r of routes) {
+    let price: string | DynamicPrice;
+    if (typeof r.price === "string") {
+      price = r.price;
+    } else {
+      const fn = r.price;
+      const fallback = r.displayPrice ?? "$0.00";
+      price = (ctx) => {
+        // x402's HTTPRequestContext doesn't carry the Express req, but the
+        // adapter exposes the parsed body — which is all parametric pricing
+        // currently needs. Construct a minimal Request-shaped object so the
+        // PriceFn signature stays Express-native.
+        const body = ctx.adapter.getBody?.() ?? {};
+        try {
+          return fn({ body } as unknown as Request);
+        } catch (err) {
+          log.warn("price_fn_threw", {
+            route: `${r.method} ${r.path}`,
+            message: err instanceof Error ? err.message : String(err),
+          });
+          return fallback;
+        }
+      };
+    }
     routesConfig[`${r.method} ${r.path}`] = {
       accepts: {
         scheme: "exact",
-        price: r.price,
+        price,
         network: config.network,
         payTo: config.payTo,
         maxTimeoutSeconds: 60,

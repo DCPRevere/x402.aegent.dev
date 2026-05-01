@@ -33,6 +33,15 @@ export const PASSPORT_MIGRATIONS = [
      signature   TEXT NOT NULL
    )`,
   `CREATE INDEX IF NOT EXISTS passport_passes_wallet ON passport_passes(wallet, expires_at)`,
+  `CREATE TABLE IF NOT EXISTS passport_usernames (
+     username    TEXT PRIMARY KEY COLLATE NOCASE,
+     wallet      TEXT NOT NULL,
+     pubkey      TEXT NOT NULL,
+     claimed_at  TEXT NOT NULL,
+     rotated_at  TEXT,
+     signature   TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS passport_usernames_wallet ON passport_usernames(wallet)`,
 ];
 
 export function ensurePassportTables(): void {
@@ -145,4 +154,61 @@ export function listPasses(wallet: string): PassRow[] {
       `SELECT * FROM passport_passes WHERE wallet = ? AND expires_at > ? ORDER BY issued_at DESC`,
     )
     .all(wallet.toLowerCase(), new Date().toISOString()) as PassRow[];
+}
+
+// ----- Usernames ------------------------------------------------------
+
+export interface UsernameRow {
+  username: string;
+  wallet: string;
+  pubkey: string;
+  claimed_at: string;
+  rotated_at: string | null;
+  signature: string;
+}
+
+export function insertUsername(row: Omit<UsernameRow, "rotated_at">): UsernameRow {
+  getDb()
+    .prepare(
+      `INSERT INTO passport_usernames (username, wallet, pubkey, claimed_at, signature)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(
+      row.username.toLowerCase(),
+      row.wallet.toLowerCase(),
+      row.pubkey,
+      row.claimed_at,
+      row.signature,
+    );
+  return { ...row, username: row.username.toLowerCase(), wallet: row.wallet.toLowerCase(), rotated_at: null };
+}
+
+export function getUsername(username: string): UsernameRow | null {
+  return (
+    (getDb()
+      .prepare(`SELECT * FROM passport_usernames WHERE username = ? COLLATE NOCASE`)
+      .get(username.toLowerCase()) as UsernameRow | undefined) ?? null
+  );
+}
+
+export function listUsernamesByWallet(wallet: string): UsernameRow[] {
+  return getDb()
+    .prepare(`SELECT * FROM passport_usernames WHERE wallet = ? ORDER BY claimed_at ASC`)
+    .all(wallet.toLowerCase()) as UsernameRow[];
+}
+
+export function rotateUsernamePubkey(
+  username: string,
+  newPubkey: string,
+  rotated_at: string,
+  signature: string,
+): UsernameRow | null {
+  const result = getDb()
+    .prepare(
+      `UPDATE passport_usernames SET pubkey = ?, rotated_at = ?, signature = ?
+        WHERE username = ? COLLATE NOCASE`,
+    )
+    .run(newPubkey, rotated_at, signature, username.toLowerCase());
+  if (result.changes === 0) return null;
+  return getUsername(username);
 }

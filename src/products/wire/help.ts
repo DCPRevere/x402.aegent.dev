@@ -5,7 +5,7 @@ const LAST_MODIFIED = "2026-04-30T00:00:00Z";
 export const wireHelp: ProductHelpInput = {
   name: "wire",
   description:
-    "Paid messaging inboxes. Owners create an inbox; senders pay per message; owners " +
+    "Paid messaging inboxes. Owners pay to create; senders pay per message; owners " +
     "poll to drain. Free to receive, paid to send — the inverse of email's spam economy.",
   tags: ["primitive", "messaging", "anti-spam"],
   status: "live",
@@ -18,7 +18,7 @@ export const wireHelp: ProductHelpInput = {
         "Create a paid inbox owned by a wallet. Returns the inbox id and a one-time " +
         "owner_token used to authenticate /poll and /close. The token is not recoverable; " +
         "lost token = lost inbox.",
-      tags: ["messaging", "free"],
+      tags: ["messaging", "paid"],
       status: "live",
       last_modified: LAST_MODIFIED,
       input: {
@@ -26,7 +26,7 @@ export const wireHelp: ProductHelpInput = {
           { name: "owner_wallet", type: "address", required: true, doc: "Wallet that will own the inbox." },
         ],
       },
-      pricing: { kind: "free" },
+      pricing: { kind: "flat", amount: "500000", amount_usdc: "0.50" },
       output: { media_types: ["application/json"] },
       examples: [
         { request: "POST /wire/inbox { owner_wallet }" },
@@ -49,7 +49,7 @@ export const wireHelp: ProductHelpInput = {
           { name: "reply_to", type: "string", required: false, doc: "Optional reply hint." },
         ],
       },
-      pricing: { kind: "flat", amount: "5000", amount_usdc: "0.005" },
+      pricing: { kind: "flat", amount: "10000", amount_usdc: "0.01" },
       output: { media_types: ["application/json"] },
       examples: [{ request: "POST /wire/inbox/<id>/send { from, body }" }],
     },
