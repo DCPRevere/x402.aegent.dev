@@ -1,4 +1,32 @@
-# x402.aegent.dev
+<div align="center">
+
+<pre>
+                                                                                    
+          ▄▄     ▄▄▄     ▄▄▄▄                                                       
+          ██   ▄██▀▀▀  ▄██████                             █▄        █▄             
+         ▄██   ██ ▄▀█▄ ▀█▄  ██               ▄▄      ▄    ▄██▄       ██             
+▀██ ██▀▄██▀ █  ██   ██     ▄█▀     ▀▀█▄▀█▄▄████ ▄█▀█▄████▄ ██     ▄████ ▄█▀█▄▀█▄ ██▀
+  ███  ███████ ██  ▄██   ▄█▀      ▄█▀██▄█▀██ ██ ██▄█▀██ ██ ██     ██ ██ ██▄█▀ ██▄██ 
+▄██ ██▄    ██   ▀███▀  ██████▄ ██ ▀█▄██▄▄▄▀████▄▀█▄▄▄██ ▀█▄██ ██ ▄█▀███▄▀█▄▄▄  ▀█▀  
+                                             ██                                     
+                                           ▀▀▀                                      
+</pre>
+
+</div>
+
+<p align="center">
+  <strong>💸 The agentic economy, deployed.</strong><br>
+  24 paid HTTP endpoints. One signing key. No accounts, no API keys, no human in the loop — any wallet can transact.
+</p>
+
+<p align="center">
+  <a href="https://www.x402.org/"><img src="https://img.shields.io/badge/protocol-x402-purple" alt="x402 protocol" /></a>
+  <a href="https://github.com/dcprevere/x402.aegent.dev"><img src="https://img.shields.io/badge/x402.aegent.dev-v0.1.0-blue" alt="x402.aegent.dev v0.1.0" /></a>
+</p>
+
+---
+
+## What it is
 
 **A live agentic-economy reference implementation.** 24 paid HTTP endpoints
 across ASCII art, verifiable randomness, identity, conditional escrow,
