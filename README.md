@@ -15,8 +15,8 @@
 </div>
 
 <p align="center">
-  <strong>An x402 reference deployment.</strong><br>
-  24 paid HTTP endpoints across six product domains, settled in USDC on Base.
+  <strong>💸 The most expansive x402 deployment.</strong><br>
+  Pay-per-call HTTP, no accounts, USDC on Base.
 </p>
 
 <p align="center">
