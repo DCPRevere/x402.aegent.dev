@@ -68,24 +68,30 @@ Set:
 
 Leave everything else at defaults for the testnet launch.
 
-## Step 3 — Server: pin the deploy key
+## Step 3 — Server: trust the deploy key
 
-Append the public key to the deploy user's `authorized_keys` with a hard
-restriction: this key can ONLY run `/srv/x402/deploy.sh`. Stolen key =
-redeploy ability, nothing more.
-
-From your laptop:
+Append the public key to the deploy user's `authorized_keys`. From your
+laptop:
 
 ```sh
 KEY="$(cat x402-deploy.pub)"
-ssh "$SSH_USER@$HOST" "echo 'command=\"/srv/x402/deploy.sh\",restrict $KEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+ssh "$SSH_USER@$HOST" "echo '$KEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
+
+Skip this if you're reusing an existing key that's already trusted on
+the host.
 
 If the deploy script needs root (it runs `docker compose`, which usually
 does), either: (a) SSH in as root, or (b) make `$SSH_USER` a member of
 the `docker` group, or (c) prefix the `docker compose` calls in
 `deploy.sh` with `sudo` and grant passwordless `sudo` for those exact
 commands via `/etc/sudoers.d/`.
+
+For tighter security, you can pin the key to a single command via
+`command="/srv/x402/deploy.sh",restrict` in front of the key in
+`authorized_keys` — see `man authorized_keys`. Don't do this on a key
+you also use interactively or for other services; generate a dedicated
+key first.
 
 ## Step 4 — Cloudflare DNS
 

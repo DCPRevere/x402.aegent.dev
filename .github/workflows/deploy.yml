@@ -74,9 +74,4 @@ jobs:
           ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Trigger remote redeploy
-        # The authorized_keys entry on the server pins this key to a single
-        # script (`/srv/x402/deploy.sh`) via `command=` and `restrict`, so
-        # whatever we send here is ignored — the server runs the pinned
-        # command. Sending `deploy` as a sentinel keeps the intent visible
-        # in CI logs.
-        run: ssh -o BatchMode=yes "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" deploy
+        run: ssh -o BatchMode=yes "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" '/srv/x402/deploy.sh'
