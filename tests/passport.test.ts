@@ -126,9 +126,13 @@ describe("/passport", () => {
 
     it("rejects an invalid solution", async () => {
       const app = freshApp();
+      // Difficulty 28 (the max the route accepts) means a guessed solution
+      // would need 28 leading zero bits, ~1 in 268M odds — small enough to
+      // make this deterministic in CI. With low difficulty (e.g. 12) a
+      // literal like "garbage" can pass by coincidence ~1 in 4096 runs.
       const issue = await request(app)
         .post("/passport/anti-captcha/challenge")
-        .send({ wallet: WALLET, difficulty: 12 });
+        .send({ wallet: WALLET, difficulty: 28 });
       const solve = await request(app)
         .post("/passport/anti-captcha/solve")
         .send({ challenge_id: issue.body.id, solution: "garbage" });
